@@ -15,72 +15,60 @@ require_relative 'connection.rb'
 ######
 
 class SiriProxy::Plugin::XFinityRemote < SiriProxy::Plugin
-  def initialize(config)
+	attr_accessor :user
+	attr_accessor :password
+	attr_accessor :client
+	
+  def initialize(config = {})
     #if you have custom configuration options, process them here!
-	@client = Connection.new()
+    @user = config["user"]
+    @password = config["password"]
+	self.client = Connection.new(@user, @password)
   end
 
-  #get the user's location and display it in the logs
-  #filters are still in their early stages. Their interface may be modified
-  filter "SetRequestOrigin", direction: :from_iphone do |object|
-    puts "[Info - User Location] lat: #{object["properties"]["latitude"]}, long: #{object["properties"]["longitude"]}"
-
-    #Note about returns from filters:
-    # - Return false to stop the object from being forwarded
-    # - Return a Hash to substitute or update the object
-    # - Return nil (or anything not a Hash or false) to have the object forwarded (along with any
-    #    modifications made to it)
-  end
-
-  
-  listen_for /loreana/i do
-    say "Je t'aime!" #say something to the user!
-    request_completed #always complete your request! Otherwise the phone will "spin" at the user!
-  end
-
-  #demonstrate capturing data from the user (e.x. "Siri proxy number 15")
+  #Change channel by number
   listen_for /Chaîne numéro ([0-9,]*[0-9])/i do |number|
-	result = @client.changeChannelByNumber(number)
+	result = self.client.changeChannelByNumber(number)
 	if (result != '200')
 		say "Erreur"
-		@client = Connection.new()	
+		self.client = Connection.new(@user, @password)	
 		request_completed 
 	end
 	say "Chaîne #{number} changé"
-    request_completed #always complete your request! Otherwise the phone will "spin" at the user!
+    request_completed 
   end
-  
+  #Change channel by number
   listen_for /Channel number ([0-9,]*[0-9])/i do |number|
-	say "Channel #{number} changed"
-	result = @client.changeChannelByNumber(number)
+	result = self.client.changeChannelByNumber(number)
 	if (result != '200')
-		say "Erreur"
-		@client = Connection.new()	
+		say "Eror"
+		self.client = Connection.new(@user, @password)	
 		request_completed 
 	end
-    request_completed #always complete your request! Otherwise the phone will "spin" at the user!
+	say "Channel #{number} changed"
+    request_completed
   end
-  
-  listen_for /Channel ([a-zA-Z0-9]*[a-zA-Z0-9]*[a-zA-Z0-9]*[a-zA-Z0-9])/i do |name|
-	result = @client.changeChannelByName(name)
+  #Change channel by name - Experimental need to optimize
+  listen_for /Channel ([a-zA-Z0-9]*(?:\sHD)?)/i do |name|
+	result = self.client.changeChannelByName(name)
 	if (result != '200')
-		say "Erreur"
-		@client = Connection.new()	
+		say "Error"
+		self.client = Connection.new(@user, @password)
 		request_completed 
 	end
 	
 	say "Now, You are watching #{name}"
-    request_completed #always complete your request! Otherwise the phone will "spin" at the user!
+    request_completed
   end
-  
-  listen_for /Chaîne ([a-zA-Z0-9]*[a-zA-Z0-9]*[a-zA-Z0-9]*[a-zA-Z0-9])/i do |name|
-	result = @client.changeChannelByName(name)
+  #Change channel by name
+  listen_for /Chaîne ([a-zA-Z0-9]*(?:\sHD)?)/i do |name|
+	result = self.client.changeChannelByName(name)
 	if (result != '200')
 		say "Erreur"
-		@client = Connection.new()	
+		self.client = Connection.new(@user, @password)	
 		request_completed 
 	end
 	say "Tu regardes #{name}"
-    request_completed #always complete your request! Otherwise the phone will "spin" at the user!
+    request_completed
   end
 end

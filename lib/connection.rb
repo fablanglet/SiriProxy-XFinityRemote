@@ -4,11 +4,12 @@ require "uri"
 require "json"
 
 class Connection	
-	attr_accessor :cookie,:profilToken,:deviceKey,:channelList
-	def initialize()
-		self.cookie = auth()
-
-		self.profilToken = getProfilToken(self.cookie )
+	attr_accessor :cookie,:profilToken,:deviceKey,:channelList,:user, :password
+	def initialize(user, password)
+		self.user = user
+		self.password = password
+		self.cookie = auth(self.user, self.password)
+		self.profilToken = getProfilToken(self.cookie)
 		profileInfo = getProfileInfo(self.cookie , self.profilToken)
 		self.deviceKey = profileInfo['UnifiedVal']['udf']['devices'][0]['rtune']['deviceKey']
 		
@@ -32,7 +33,7 @@ class Connection
 		return changeChannel(self.cookie, self.deviceKey , token, number)
 	end
 	
-	def auth()
+	def auth(user, password)
 		http = Net::HTTP.new('login.comcast.net', 443)
 		http.use_ssl = true
 		path = '/login'
@@ -42,7 +43,7 @@ class Connection
 		cookie = resp.response['set-cookie'].split('; ')[0]
 
 		# POST request -> logging in
-		data = 'user=&passwd='
+		data = 'user='+user+'&passwd='+password
 		headers = {
 		  'Cookie' => cookie,
 		  'Referer' => 'https://login.comcast.net/login',
@@ -50,9 +51,6 @@ class Connection
 		}
 
 		resp, data = http.post(path, data, headers)
-		#puts 'Code = ' + resp.code
-		#puts 'Message = ' + resp.message
-		#resp.each {|key, val| puts key + ' = ' + val}
 		return resp.get_fields('set-cookie')
 	end
 
@@ -62,7 +60,6 @@ class Connection
 			if cookies[i] != nil 
 				if cookies[i].index('tls_s_ticket') != nil 
 					profilToken = cookies[i].gsub('tls_s_ticket=', '')[0,31]
-					#puts profilToken
 					break
 				end
 			end
@@ -93,7 +90,6 @@ class Connection
 		responseKey =  http2.request(req)
 		json = responseKey.body
 		parser = JSON.parse(json)
-		#deviceKey = parser['UnifiedVal']['udf']['devices'][0]['rtune']['deviceKey']
 		return parser
 	end
 
@@ -158,7 +154,7 @@ class Connection
 	end
 
 	def findChannelNumber(name, channelList)
-		result = channelList.select {|channel| channel[1] == name}
+		result = channelList.select {|channel| channel[1] == name || channel[1] == name + ' HD'}
 		return result[0]
 	end
 

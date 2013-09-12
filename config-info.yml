@@ -1,0 +1,4 @@
+    - name: 'XFinityRemote'
+      path: 'github.com/fablanglet/SiriProxy-XFinityRemote.git'
+      user: 'comcast.login.here'
+      password: 'comcast.password.here'
